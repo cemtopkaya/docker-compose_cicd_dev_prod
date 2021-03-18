@@ -1,0 +1,198 @@
+# ARG_CINAR_ENV = dev | prod | deb
+ARG ARG_CINAR_ENV
+ARG ARG_NF_PAKET_ADI 
+
+FROM ubuntu:xenial AS ubuntu-ortak
+USER root
+WORKDIR /root
+
+RUN if [ ! -f "/root/.bashrc" ]; then /bin/cp /etc/skel/.bashrc ~/; fi
+RUN echo "deb [trusted=yes] http://192.168.13.47/debs/ amd64/" >> /etc/apt/sources.list; apt update;
+RUN echo "deb [trusted=yes] http://192.168.13.173:8080/debs/ amd64/" > /etc/apt/sources.list; apt update;
+RUN echo "deb [trusted=yes] http://192.168.13.173:8080/latest/debs/ amd64/" > /etc/apt/sources.list; apt update;
+
+RUN apt install -y  certificate \
+                    cinarloggersink \
+                    cpp-jwt \
+                    dkms \
+                    dpdk \
+                    libevent \
+                    libicu55 \
+                    libnghttp2-asio \
+                    libprometheuscpp \
+                    mongo-c-driver \
+                    mongo-cxx-driver \
+                    nlohmann-json \
+                    python \
+                    nano \
+                    curl \
+                    wget \
+                    net-tools \
+                    netcat \
+                    iputils-ping \
+                    g3log \
+                    libpq5 \
+                    sudo \
+                    libreadline-dev \
+                    # libxerces-c-dev paketi smf-upf-amf ekibi dev prod debug ortamlarında kullanıyor.control dependecy eklenmeli.
+                    libxerces-c-dev \ 
+                    #lix2x3asnpackage  paketi smf-amf ekibi prod-debug dev ortamlarında kullanıyor.control dependecy eklenmeli.
+                    lix2x3asnpackage \
+                    nettle-dev 
+FROM ubuntu-ortak AS ubuntu-prod
+RUN apt install -y  boost-all \
+                    libncurses5 \
+                    libsasl2-dev \
+                    libssl-dev \
+                    libxml2 \
+                    uuid 
+FROM ubuntu-prod AS ubuntu-deb
+RUN apt install -y  gdb \
+                    gdbserver 
+FROM ubuntu-ortak AS ubuntu-dev
+RUN apt install -y  zip \
+                    unzip \
+                    g++ \
+                    make \
+                    checkinstall \
+                    gdb \
+                    gdbserver \
+                    default-jre \
+                    doxygen \
+                    gcovr \
+                    cppcheck \
+                    graphviz \
+                    libpqxx-dev \
+                    libsctp-dev \
+                    libncurses5-dev \
+                    libxml2-dev \
+                    uuid-dev \
+                    librabbitmq-dev \
+                    rabbitmq-server \
+                    libgnutls-dev \
+                    libgcrypt-dev \
+                    libidn11-dev \
+                    libsctp-dev \
+                    boost-all-dev \
+                    cinarcodegenerator  \
+                    cpp-jwt \
+                    googletest
+
+#FROM ubuntu-dev AS nfdev
+#ARG ARG_CINAR_ENV
+#ARG ARG_NF_PAKET_ADI 
+#RUN apt install -y ${ARG_NF_PAKET_ADI}=`apt-cache show ${ARG_NF_PAKET_ADI} | grep Version | cut -d' ' -f2 |  grep debug | head -1`
+
+FROM ubuntu-dev AS nfbuild
+ARG ARG_CINAR_ENV
+ARG ARG_NF_PAKET_ADI 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN apt install -y cinarframework.dbg && \
+    if [ ${ARG_NF_PAKET_ADI}  == "cnrnrf" ]; then \
+       apt install -y cinarnnrfaccesstoken.15.201906-Interworking.dbg \
+                      cinarnnrfnfdiscovery.15.201906-Interworking.dbg \
+                      cinarnnrfnfmanagement.15.201906-Interworking.dbg ; \
+    elif [ ${ARG_NF_PAKET_ADI}  == "cnrnssf" ]; then \
+       apt install -y cinarnnssfnssaiavailability.15.201906-Interworking.dbg \
+                      cinarnnssfnsselection.15.201906-Interworking.dbg \
+                      cinarnnrfaccesstoken.15.201906-interworking.dbg \
+                      cinarnnrfnfdiscovery.15.201906-interworking.dbg  \
+                      cinarnnrfnfmanagement.15.201906-interworking.dbg ; \
+    elif [ ${ARG_NF_PAKET_ADI}  == "cnrnef" ]; then \
+        apt install -y cinarnnefnorthboundassessionwithqos.15.201906-interworking.dbg \
+                       cinarnnefnorthboundcpprovisioning.15.201906-interworking.dbg \
+                       cinarnnefnorthbounddevicetriggering.15.201906-interworking.dbg \
+                        cinarnnefnorthboundmonitoringevent.15.201906-interworking.dbg \
+                        cinarnnefnorthboundpfdmanagement.15.201906-interworking.dbg \
+                        cinarnnefnorthboundtrafficinfluence.15.201906-interworking.dbg \
+                        cinarnnefpfdmanagement.15.201906-interworking.dbg \
+                        cinarafprofilemanagement.15.201906-interworking.dbg \
+                        cinarnnrfaccesstoken.15.201906-interworking.dbg \
+                        cinarnnrfnfdiscovery.15.201906-interworking.dbg \
+                        cinarnnrfnfmanagement.15.201906-interworking.dbg \
+                        cinarnpcfpolicyauthorization.15.201906-interworking.dbg \
+                        cinarresourcemanagementofbdt.15.201906-interworking.dbg \
+                        cinarnpcfbdtpolicycontrol.15.201906-interworking.dbg \
+                        cinarnudrdatarepository.15.201906-interworking.dbg \
+                        cinarnudmsdm.15.201906-interworking.dbg \
+                        cinarnudmee.15.201906-interworking.dbg \
+                        cinarnudmuecm.15.201906-interworking.dbg \
+                        cinarnamfeventexposure.15.201906-interworking.dbg \
+                        cinarnsmfeventexposure.15.201906-interworking.dbg ; \
+    elif [[ ${ARG_NF_PAKET_ADI}  == "cnrausf" || ${ARG_NF_PAKET_ADI} == "cnrudm" ||  ${ARG_NF_PAKET_ADI}  == "cnrudr" ]]; then \
+        apt install -y cinarasn1clib=1.0.4 ; \
+    elif [ ${ARG_NF_PAKET_ADI}  == "cnrsmf" ]; then \
+        apt install -y lix1package \        
+                        cinarasn1clib=1.0.4 \
+                        libxerces-c-dev  \
+                        lix2x3asnpackage \
+                        xsd \
+                        cinarnnrfaccesstoken.15.201906-Interworking.dbg \
+                        cinarnnrfnfdiscovery.15.201906-Interworking.dbg \
+                        cinarnnrfnfmanagement.15.201906-Interworking.dbg \
+                        cinarnamfeventexposure.15.201906-Interworking.dbg \
+                        cinarnudmsdm.15.201906-Interworking.dbg \
+                        cinarnudmee.15.201906-Interworking.dbg \
+                        cinarnudmuecm.15.201906-Interworking.dbg \
+                        cinarnsmfpdusession.15.201906-Interworking.dbg \
+                        cinarnamfcommunication.15.201906-Interworking.dbg \
+                        cinarnsmfeventexposure.15.201906-Interworking.dbg \
+                        cinarnpcfsmpolicycontrol.15.201906-Interworking.dbg \
+                        cinarnnefpfdmanagement.15.201906-Interworking.dbg \
+                        cinarnchfconvergedcharging.15.201906-Interworking.dbg ; \
+    elif [ ${ARG_NF_PAKET_ADI}  == "cnramf" ]; then \
+        apt install -y cinarasn1clib \
+                        cinarcryptolib \
+                        lix1package \
+                        libxerces-c-dev  \
+                        lix2x3asnpackage \
+                        xsd \
+                        cinarnnrfnfmanagement.15.201906-interworking.dbg\
+                        cinarnnrfnfdiscovery.15.201906-interworking.dbg \
+                        cinarnamfcommunication.15.201906-interworking.dbg \
+                        cinarnsmfeventexposure.15.201906-interworking.dbg \
+                        cinarnnrfaccesstoken.15.201906-interworking.dbg \
+                        cinarnudmsdm.15.201906-interworking.dbg \
+                        cinarnudmuecm.15.201906-interworking.dbg \
+                        cinarnpcfampolicycontrol.15.201906-interworking.dbg \
+                        cinarnsmfpdusession.15.201906-interworking.dbg \
+                        cinarnausfueauthentication.15.201906-interworking.dbg \
+                        cinarnnssfnsselection.15.201906-interworking.dbg \
+                        cinarnnssfnssaiavailability.15.201906-interworking.dbg \
+                        cinarnamfeventexposure.15.201906-interworking.dbg \
+                        cinarnsmsfsmservice.15.201906-interworking.dbg \
+                        cinarnamfmt.15.201906-interworking.dbg \
+                        cinarnamflocation.15.201906-interworking.dbg ; \
+    elif [ ${ARG_NF_PAKET_ADI}  == "cnrupf" ]; then \
+        apt install -y xsd \
+                       libxerces-c-dev ; \
+    elif [ ${ARG_NF_PAKET_ADI}  == "cnrpcf" ]; then \
+        apt install -y freediameter-cinar-common  \
+                       freediameter-cinar-dev ; \
+    fi && \
+    echo "/opt/cinar/lib" > /etc/ld.so.conf.d/cinar.conf && /sbin/ldconfig 
+    
+# #--------------------------------------------------------------
+
+FROM ubuntu-${ARG_CINAR_ENV} AS nfinstall
+
+# #NF'in son paket versiyonuna göre cinar env oluşturulacak.(debug >> deb ve release >> prod)
+ARG ARG_NF_PAKET_ADI
+ARG ARG_CINAR_ENV
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+RUN if [ "${ARG_CINAR_ENV}" == "dev" ] ; then \
+      echo "development enviroment" ; \
+    else \
+      if [ "${ARG_CINAR_ENV}" == "prod" ] ; then \
+          VERSION=`apt-cache show ${ARG_NF_PAKET_ADI} | grep Version | cut -d' ' -f2 |  grep -v debug | head -1` ; \
+          apt-get install -y $ARG_NF_PAKET_ADI=$VERSION ; \
+          echo "/opt/cinar/lib" > /etc/ld.so.conf.d/cinar.conf && /sbin/ldconfig ; \
+      elif [ "${ARG_CINAR_ENV}" == "deb" ] ; then \  
+          VERSION=`apt-cache show ${ARG_NF_PAKET_ADI} | grep Version | cut -d' ' -f2 |  grep debug | head -1` ; \
+          apt-get install -y $ARG_NF_PAKET_ADI=$VERSION ; \      
+          echo "/opt/cinar/lib" > /etc/ld.so.conf.d/cinar.conf && /sbin/ldconfig  ; \
+      fi \
+    fi
+    
+ENTRYPOINT ["/sbin/init"]

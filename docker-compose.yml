@@ -1,0 +1,42 @@
+version: "3.4"
+
+services:
+    prod:
+      image: cinar/${NF}_prod:${TAG}
+      build:
+        context: .
+        dockerfile: Dockerfile.base
+        target: nfinstall
+        args:
+          - ARG_CINAR_ENV=prod
+          - ARG_NF_PAKET_ADI=${NF}
+      container_name: c${NF}_prod
+
+    dev:
+      image: cinar/${NF}_dev:${TAG}
+      build:
+        context: .
+        dockerfile: Dockerfile.base
+        target: nfbuild
+        args:
+          - ARG_CINAR_ENV=dev
+          - ARG_NF_PAKET_ADI=${NF}
+      container_name: c${NF}_dev
+    
+    jenkins-node:
+      image: cinar/${NF}_jenkins:${TAG}
+      depends_on: 
+        - dev
+      build:
+        context: .
+        dockerfile: Dockerfile.jenkins
+        args:
+          - BASE_IMAGE=cinar/${NF}_dev:${TAG}
+      extra_hosts:
+          - "bitbucket.ulakhaberlesme.com.tr:192.168.10.14"
+      container_name:  c${NF}_jenkins
+      command: java -jar /usr/share/jenkins/agent.jar
+      tty: true
+      stdin_open: true
+      
+
